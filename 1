@@ -1,0 +1,90 @@
+// ==UserScript==
+// @name         [REWS_GE] Atakowanie losowego gracza
+// @namespace    https://www.margonem.pl/profile/view,9871878
+// @description  Dodatek atakuje losowego gracza na którym stoisz. Dla GE.
+// @version      1.0
+// @author       itsRews
+// @author       itsRews
+// @match        *://*.margonem.pl/
+// @exclude      *://www.margonem.pl/*
+// @exclude      *://forum.margonem.pl/*
+// @exclude      *://addons2.margonem.pl/
+// @icon         https://www.google.com/s2/favicons?sz=64&domain=margonem.pl
+// @grant        none
+// ==/UserScript==
+(function() {
+    //Pod ten przycisk przeciwnicy będą atakowani.
+    let PRZYCISK = "."; //MOŻESZ TO ZMIENIĆ. Obecnie poprzez kliknięcie kropki losowa osoba będzie atakowana.
+
+    //Po wciścięciu jakiegokolwiek klawisza...
+    document.addEventListener("keyup", ev => {
+        //Lista poniżej jest pusta, i do niej dodani zostaną gracze których można zaatakować
+        let listaGraczy = [];
+        //Jeżeli wciśnięty przycisk jest taki sam jak bind PRZYCISK oraz gracz nie pisze na chacie
+        if (ev.key === PRZYCISK && !["INPUT", "TEXTAREA", "MAGIC_INPUT"].includes(ev.target.tagName)) {
+            //Pokazuje się żółty komunikat
+            message('Atakowanie losowej osoby.');
+            //Nowy interface używa "Engine" w kodzie, poniższa linijka sprawdza czy można użyć "Engine", jeżeli tak to
+            //gracz jest na Nowym Interface
+            let NowyInterface = typeof Engine !== 'undefined' && typeof Engine.hero !== 'undefined'
+            //Obecnie "graczeNaMapie" nie ma wartości.
+            let graczeNaMapie;
+            //Jeżeli wykryto Nowy Interface
+            if (NowyInterface) {
+                //"Engine.others.check()" wysyła liste graczy którzy są na mapie.
+                graczeNaMapie = Engine.others.check();
+                //Jeżeli wykryto Stary Interface
+            } else {
+                //"g.other" wysyła liste graczy którzy są na mapie.
+                graczeNaMapie = g.other;
+            }
+            //".forEach" sprawdza tą każdego gracza z listy pojedyńczo, po czym
+            //"playerData" umożliwi sprawdzenie wartości przypisane graczowi który jest sprawdzany.
+            Object.values(graczeNaMapie).forEach((playerData) => {
+                //Obecnie "player" oraz "otherPlayer" nie mają wartości.
+                let player;
+                let otherPlayer;
+                //Jeżeli wykryto Nowy Interface
+                if (NowyInterface) {
+                    //NI używa "playerData.d" w tym przypadku, w momencie gdy SI używa tylko "playerData".
+                    otherPlayer = playerData.d;
+                    //Tak samo tutaj, NI używa "Engine.hero.d" w momencie gdy SI używa tylko "hero".
+                    player = Engine.hero.d;
+                } else {
+                    //Jak wyżej
+                    player = hero;
+                    otherPlayer = playerData;
+                }
+                //"playerDistance" oblicza czy gracz jest w zasięgu do zaatakowania.
+                let playerDistance = Math.abs(player.x - otherPlayer.x) + Math.abs(player.y - otherPlayer.y);
+                //Jeżeli gracz jest w zasięgu do zaatakowania...
+                if (playerDistance < 2) {
+                    //Jeżeli wykryto ID postaci
+                    if (otherPlayer.hasOwnProperty('id')) {
+                        //Dodaj ID gracza do listy graczy
+                        listaGraczy.push(otherPlayer.id);
+                    }
+                }
+            });
+        }
+
+        //W link poniżej jest dokładniejsze objaśnienie jak to działa, ale funkcja poniżej generuje randomową liczbe
+        //pomiędzy wartością minimalną i maksymalną i ją zwraca.
+        //https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/random
+        function getRandomInt(min, max) {
+            min = Math.ceil(min);
+            max = Math.floor(max);
+            return Math.floor(Math.random() * (max - min) + min); // The maximum is exclusive and the minimum is inclusive
+        }
+
+        //Jeżeli znaleziono minimum niż jednego gracza
+        if (listaGraczy.length !== 0) {
+            //index będzie użyty do wybrania randomowego gracza z listy
+            let index = getRandomInt(0, listaGraczy.length);
+            //id atakowanego jest wybierane poprzez wybranie randomowego gracza z listy
+            let idAtakowanego = listaGraczy[index];
+            //gracz z wybranym ID jest atakowany.
+            _g(`fight&a=attack&id=${idAtakowanego}`);
+        }
+    });
+})();
